@@ -12,4 +12,4 @@ load_dotenv(os.path.join(base_dir, '.env'))
 
 API_URL = os.getenv("API_URL", "")
 MACHINE_ID = get_machine_id()
-CHECK_INTERVAL = 15
+CHECK_INTERVAL = 1

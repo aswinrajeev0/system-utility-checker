@@ -1,11 +1,14 @@
 import requests
 from utility.config import API_URL
 from utility.config import MACHINE_ID
+import platform
 
 def send_report(data):
+    os_type = platform.system()
     payload = {
         "machine_id": MACHINE_ID,
-        "data": data
+        "os_type": os_type,
+        **data
     }
     print(payload)
     try:
