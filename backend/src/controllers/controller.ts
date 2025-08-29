@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { Parser } from "json2csv";
 import { payloadSchema, reportFilterSchema } from "../utils/validations";
 import { createReportService, getReportsService } from "../services/report.service";
 import { HTTP_STATUS } from "../shared/constants";
@@ -20,7 +21,7 @@ export const getReports = async (req: Request, res: Response, next: NextFunction
     try {
         const { os_type, machine_id, disk_encryption, os_update, antivirus, sleep_settings, from, to } = req.query;
 
-        reportFilterSchema.parse(req.query);
+        // reportFilterSchema.parse(req.query);
 
         const filter: ReportFilterDTO = {};
         if (os_type) filter.os_type = os_type.toString();
@@ -47,3 +48,37 @@ export const getReports = async (req: Request, res: Response, next: NextFunction
         next(error)
     }
 }
+
+export const getReportsCSV = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { os_type, machine_id, disk_encryption, os_update, antivirus, sleep_settings, from, to } = req.query;
+
+        const filter: ReportFilterDTO = {};
+        if (os_type) filter.os_type = os_type.toString();
+        if (machine_id) filter.machine_id = machine_id.toString();
+        if (disk_encryption !== undefined) filter.disk_encryption = disk_encryption === "true";
+        if (os_update !== undefined) filter.os_update = os_update === "true";
+        if (antivirus !== undefined) filter.antivirus = antivirus === "true";
+        if (sleep_settings !== undefined) filter.sleep_settings = sleep_settings === "true";
+
+        if (from || to) {
+            filter.createdAt = {};
+            if (from) filter.createdAt.$gte = new Date(from as string);
+            if (to) filter.createdAt.$lte = new Date(to as string);
+        }
+
+        const reports = await getReportsService(filter);
+
+        const json2csvParser = new Parser({
+            fields: ["machine_id", "os_type", "disk_encryption", "os_update", "antivirus", "sleep_settings", "createdAt", "updatedAt"]
+        });
+        const csv = json2csvParser.parse(reports);
+
+        res.header("Content-Type", "text/csv");
+        res.attachment("reports.csv");
+        res.status(HTTP_STATUS.OK).send(csv);
+
+    } catch (error) {
+        next(error);
+    }
+};
